@@ -31,32 +31,40 @@ function Dashboard() {
 
   const normalizedTasks = useMemo(
     () =>
-      tasks.map((task) => ({
-        ...task,
-        status: (task.status || "").toLowerCase(),
-        priority: (task.priority || "").toLowerCase(),
-      })),
+      tasks.map((task) => {
+        const priority = (task.priority || "").toLowerCase();
+        const explicit = task.status != null && String(task.status).trim() !== "";
+        const done =
+          task.completed === true ||
+          ["done", "completed"].includes(String(task.status || "").toLowerCase());
+        const status = explicit
+          ? String(task.status).toLowerCase()
+          : done
+            ? "completed"
+            : "todo";
+        return { ...task, status, priority };
+      }),
     [tasks]
   );
 
   const totalTasks = normalizedTasks.length;
-  const inProgress = normalizedTasks.filter((t) =>
-    ["in progress", "in_progress", "doing", "pending"].includes(t.status)
-  ).length;
   const completed = normalizedTasks.filter((t) =>
     ["done", "completed"].includes(t.status)
   ).length;
-  const overdue = normalizedTasks.filter(
-    (t) =>
-      !["done", "completed"].includes(t.status) &&
-      (t.due_date || t.dueDate || t.deadline)
-  ).length;
+  const inProgress = Math.max(0, totalTasks - completed);
+  const overdue = normalizedTasks.filter((t) => {
+    if (["done", "completed"].includes(t.status)) return false;
+    const raw = t.due_date || t.dueDate || t.deadline;
+    if (!raw) return false;
+    const d = new Date(raw);
+    return !Number.isNaN(d.getTime()) && d.getTime() < Date.now();
+  }).length;
 
-  const backlogTasks = normalizedTasks.filter((t) =>
-    ["backlog", "todo", "to do"].includes(t.status)
+  const backlogTasks = normalizedTasks.filter(
+    (t) => !["done", "completed"].includes(t.status) && t.priority === "low"
   );
-  const todoTasks = normalizedTasks.filter((t) =>
-    ["todo", "to do", "in progress", "in_progress", "doing"].includes(t.status)
+  const todoTasks = normalizedTasks.filter(
+    (t) => !["done", "completed"].includes(t.status) && t.priority !== "low"
   );
 
   return (

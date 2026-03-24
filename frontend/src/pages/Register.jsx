@@ -46,7 +46,7 @@ const Register = () => {
             
             localStorage.setItem("token", res.data.token);
             alert("Registration successful! Welcome " + username);
-            navigate("/dashboard");
+            navigate("/");
         } catch (err) {
             const errorMsg = err.response?.data?.error || "Registration failed. Please try again.";
             setError(errorMsg);

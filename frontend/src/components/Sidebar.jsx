@@ -2,10 +2,10 @@ import React from "react";
 import "./Sidebar.css";
 import { NavLink } from "react-router-dom";
 import {
-  FaThLarge,
-  FaTasks,
-  FaColumns,
-  FaCalendarAlt,
+  FaBorderAll,
+  FaListCheck,
+  FaTableColumns,
+  FaCalendarDays,
   FaChartBar,
   FaFolderOpen,
   FaUsers,
@@ -21,19 +21,19 @@ function Sidebar() {
         <p className="menu-title">Navigation</p>
 
         <NavLink to="/" className="menu-item">
-          <FaThLarge /> <span>Dashboard</span>
+          <FaBorderAll /> <span>Dashboard</span>
         </NavLink>
 
         <NavLink to="/tasks" className="menu-item">
-          <FaTasks /> <span>My Tasks</span>
+          <FaListCheck /> <span>My Tasks</span>
         </NavLink>
 
         <NavLink to="/board" className="menu-item">
-          <FaColumns /> <span>Board</span>
+          <FaTableColumns /> <span>Board</span>
         </NavLink>
 
         <NavLink to="/calendar" className="menu-item">
-          <FaCalendarAlt /> <span>Calendar</span>
+          <FaCalendarDays /> <span>Calendar</span>
         </NavLink>
 
         <NavLink to="/analytics" className="menu-item">

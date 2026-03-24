@@ -25,7 +25,7 @@ const Login = () => {
             const res = await API.post("/auth/login/", { username, password });
             localStorage.setItem("token", res.data.token);
             alert("Login successful! Welcome " + res.data.user.username);
-            navigate("/dashboard");
+            navigate("/");
         } catch (err) {
             const errorMsg = err.response?.data?.error || "Login failed. Please check your credentials.";
             setError(errorMsg);

@@ -41,7 +41,7 @@ function Home() {
         <button
           className="dashboard-btn"
           onClick={() =>
-            isLoggedIn ? navigate("/dashboard") : handleLogin()
+            isLoggedIn ? navigate("/") : handleLogin()
           }
         >
           Go to Dashboard
