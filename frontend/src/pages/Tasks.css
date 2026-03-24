@@ -1,0 +1,11 @@
+.tasks-page {
+  padding: 20px;
+  background-color: #f7f8fa;
+  min-height: 100vh;
+}
+
+.tasks-page h1 {
+  font-size: 2rem;
+  margin-bottom: 20px;
+  color: #333;
+}

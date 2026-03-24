@@ -1,0 +1,96 @@
+/* Page */
+.calendar-container {
+  padding: 30px;
+  background: #f4f6f9;
+  min-height: 100vh;
+  font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+}
+
+/* Header */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.calendar-header h1 {
+  font-size: 26px;
+  font-weight: 700;
+}
+
+.calendar-nav button {
+  background: #2563eb;
+  color: white;
+  border: none;
+  padding: 8px 14px;
+  margin: 0 5px;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+.calendar-nav button:hover {
+  background: #1e40af;
+}
+
+/* Grid */
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+}
+
+/* Day Header */
+.calendar-day-name {
+  text-align: center;
+  font-weight: 600;
+  color: #6b7280;
+}
+
+/* Day Cell */
+.calendar-day {
+  background: white;
+  border-radius: 12px;
+  min-height: 100px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+  position: relative;
+  transition: transform 0.2s ease;
+}
+
+.calendar-day:hover {
+  transform: translateY(-3px);
+}
+
+/* Date */
+.calendar-date {
+  font-size: 14px;
+  font-weight: bold;
+}
+
+/* Tasks inside day */
+.calendar-task {
+  margin-top: 5px;
+  padding: 4px 6px;
+  font-size: 12px;
+  border-radius: 6px;
+  color: white;
+}
+
+/* Priority colors */
+.high {
+  background: #ef4444;
+}
+
+.medium {
+  background: #f59e0b;
+}
+
+.low {
+  background: #22c55e;
+}
+
+/* Today highlight */
+.today {
+  border: 2px solid #2563eb;
+}
