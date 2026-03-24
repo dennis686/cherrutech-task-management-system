@@ -2,11 +2,11 @@ import React, { useEffect, useMemo, useState } from "react";
 import {
   FaArrowTrendUp,
   FaClock,
-  FaExclamationTriangle,
   FaListUl,
-  FaSearch,
-  FaSlidersH,
+  FaMagnifyingGlass,
+  FaSliders,
   FaSpinner,
+  FaTriangleExclamation,
 } from "react-icons/fa6";
 import "./Dashboard.css";
 
@@ -23,7 +23,7 @@ function Dashboard() {
         setTasks(taskData);
       } catch (err) {
         console.error(err);
-        setTasks([]);
+        setTasks([]); 
       }
     };
     fetchTasks();
@@ -63,10 +63,10 @@ function Dashboard() {
     <div className="dashboard-page">
       <div className="dashboard-toolbar">
         <button className="toolbar-filter-btn" type="button" aria-label="Filter tasks">
-          <FaSlidersH />
+          <FaSliders />
         </button>
         <div className="dashboard-search">
-          <FaSearch className="search-icon" />
+          <FaMagnifyingGlass className="search-icon" />
           <input type="text" placeholder="Search tasks..." />
         </div>
       </div>
@@ -116,7 +116,7 @@ function Dashboard() {
             <p className="stat-trend negative">-5% vs last week</p>
           </div>
           <span className="stat-icon rose">
-            <FaExclamationTriangle />
+            <FaTriangleExclamation />
           </span>
         </div>
       </div>
