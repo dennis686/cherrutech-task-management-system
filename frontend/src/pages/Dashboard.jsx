@@ -23,7 +23,7 @@ function Dashboard() {
         setTasks(taskData);
       } catch (err) {
         console.error(err);
-        setTasks([]); 
+        setTasks([]);
       }
     };
     fetchTasks();

@@ -152,10 +152,6 @@
   gap: 18px;
 }
 
-.board-column-card {
-  background: transparent;
-}
-
 .board-column-card h3 {
   margin: 0 0 12px;
   display: flex;
