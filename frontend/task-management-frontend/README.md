@@ -100,11 +100,4 @@ Recommended settings:
 
 - Framework preset: `Vite`
 - Build command: `npm run build`
-- Output directory: `dist`
 
-## Related Files
-
-- [App.jsx](C:/Users/hp/OneDrive/Desktop/task%20management%20system/frontend/task-management-frontend/src/App.jsx)
-- [main.jsx](C:/Users/hp/OneDrive/Desktop/task%20management%20system/frontend/task-management-frontend/src/main.jsx)
-- [taskflowApi.js](C:/Users/hp/OneDrive/Desktop/task%20management%20system/frontend/task-management-frontend/src/api/taskflowApi.js)
-- [Root README](C:/Users/hp/OneDrive/Desktop/task%20management%20system/README.md)
