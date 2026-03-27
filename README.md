@@ -153,6 +153,74 @@ EMAIL_USE_SSL=False
 DEFAULT_FROM_EMAIL=your_email@gmail.com
 ```
 
+For production, use:
+
+- [backend/.env.production.example](C:/Users/hp/OneDrive/Desktop/task%20management%20system/backend/.env.production.example)
+
+## Deployment
+
+Recommended deployment setup:
+
+- Backend on Render
+- Frontend on Vercel
+
+Included deployment files:
+
+- [render.yaml](C:/Users/hp/OneDrive/Desktop/task%20management%20system/render.yaml)
+- [backend/.env.production.example](C:/Users/hp/OneDrive/Desktop/task%20management%20system/backend/.env.production.example)
+
+### Backend on Render
+
+Use a Python web service from this repository.
+
+Recommended backend settings:
+
+- Root directory: `backend`
+- Build command:
+
+```text
+pip install -r requirements.txt && python manage.py collectstatic --noinput && python manage.py migrate
+```
+
+- Start command:
+
+```text
+gunicorn config.wsgi:application
+```
+
+Set these environment variables on Render:
+
+- `DEBUG=False`
+- `SECRET_KEY=<secure-secret>`
+- `ALLOWED_HOSTS=<your-render-domain>`
+- `CORS_ALLOWED_ORIGINS=https://<your-vercel-domain>`
+- `CSRF_TRUSTED_ORIGINS=https://<your-render-domain>,https://<your-vercel-domain>`
+- `DATABASE_URL=<your-postgres-url>`
+- `EMAIL_BACKEND=django.core.mail.backends.smtp.EmailBackend`
+- `EMAIL_HOST=smtp.gmail.com`
+- `EMAIL_PORT=587`
+- `EMAIL_HOST_USER=<your-email>`
+- `EMAIL_HOST_PASSWORD=<your-gmail-app-password>`
+- `EMAIL_USE_TLS=True`
+- `EMAIL_USE_SSL=False`
+- `DEFAULT_FROM_EMAIL=<your-email>`
+
+### Frontend on Vercel
+
+Deploy the React app from:
+
+- `frontend/task-management-frontend`
+
+Recommended frontend settings:
+
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+Set this environment variable on Vercel:
+
+- `VITE_API_URL=https://<your-render-domain>/api`
+
 ## Main Routes
 
 Frontend:

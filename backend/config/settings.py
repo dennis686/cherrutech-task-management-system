@@ -2,17 +2,26 @@ import os
 from pathlib import Path
 from dotenv import load_dotenv
 
+try:
+    import dj_database_url
+except ImportError:
+    dj_database_url = None
+
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 load_dotenv(BASE_DIR / ".env")
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-your-secret-key-change-in-production'
+SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['*']
+ALLOWED_HOSTS = [
+    host.strip()
+    for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    if host.strip()
+]
 
 # Application definition
 INSTALLED_APPS = [
@@ -39,6 +48,13 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
+if os.getenv('USE_WHITENOISE', 'True').lower() == 'true':
+    try:
+        import whitenoise  # noqa: F401
+        MIDDLEWARE.insert(1, 'whitenoise.middleware.WhiteNoiseMiddleware')
+    except ImportError:
+        pass
+
 ROOT_URLCONF = 'config.urls'
 
 TEMPLATES = [
@@ -60,12 +76,20 @@ TEMPLATES = [
 WSGI_APPLICATION = 'config.wsgi.application'
 
 # Database
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+if dj_database_url:
+    DATABASES = {
+        'default': dj_database_url.config(
+            default=f"sqlite:///{BASE_DIR / 'db.sqlite3'}",
+            conn_max_age=600,
+        )
     }
-}
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -92,6 +116,14 @@ USE_TZ = True
 # Static files
 STATIC_URL = '/static/'
 STATIC_ROOT = BASE_DIR / 'staticfiles'
+if os.getenv('USE_WHITENOISE', 'True').lower() == 'true':
+    try:
+        import whitenoise  # noqa: F401
+        STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+    except ImportError:
+        STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
+else:
+    STATICFILES_STORAGE = 'django.contrib.staticfiles.storage.StaticFilesStorage'
 
 # Default primary key field type
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
@@ -107,15 +139,20 @@ REST_FRAMEWORK = {
 
 # CORS Configuration
 CORS_ALLOWED_ORIGINS = [
-    'http://localhost:3000',
-    'http://localhost:3001',
-    'http://localhost:5173',
-    'http://127.0.0.1:3000',
-    'http://127.0.0.1:3001',
-    'http://127.0.0.1:5173',
+    origin.strip()
+    for origin in os.getenv(
+        'CORS_ALLOWED_ORIGINS',
+        'http://localhost:3000,http://localhost:3001,http://localhost:5173,http://127.0.0.1:3000,http://127.0.0.1:3001,http://127.0.0.1:5173'
+    ).split(',')
+    if origin.strip()
 ]
 
 CORS_ALLOW_CREDENTIALS = True
+CSRF_TRUSTED_ORIGINS = [
+    origin.strip()
+    for origin in os.getenv('CSRF_TRUSTED_ORIGINS', '').split(',')
+    if origin.strip()
+]
 
 EMAIL_BACKEND = os.getenv('EMAIL_BACKEND', 'django.core.mail.backends.console.EmailBackend')
 EMAIL_HOST = os.getenv('EMAIL_HOST', '')

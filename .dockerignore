@@ -1,0 +1,14 @@
+.git
+.gitignore
+venv
+__pycache__
+*.pyc
+*.pyo
+*.pyd
+*.log
+backend/.env
+frontend/task-management-frontend/node_modules
+frontend/task-management-frontend/dist
+backend/db.sqlite3
+.claude
+.vscode
