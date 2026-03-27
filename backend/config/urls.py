@@ -7,18 +7,17 @@ from rest_framework.decorators import api_view
 @api_view(['GET'])
 def api_root(request):
     return Response({
-        'message': 'Task Management System API',
+        'message': 'TaskFlow API',
         'version': '1.0.0',
         'endpoints': {
-            'tasks': 'http://localhost:8000/api/tasks/',
-            'completed': 'http://localhost:8000/api/tasks/completed/',
-            'pending': 'http://localhost:8000/api/tasks/pending/',
-            'high_priority': 'http://localhost:8000/api/tasks/high_priority/',
-            'statistics': 'http://localhost:8000/api/tasks/statistics/',
-            'register': 'http://localhost:8000/api/auth/register/',
-            'login': 'http://localhost:8000/api/auth/login/',
-            'logout': 'http://localhost:8000/api/auth/logout/',
-            'admin': 'http://localhost:8000/admin/',
+            'tasks': '/api/tasks/',
+            'task_statistics': '/api/tasks/statistics/',
+            'send_registration_otp': '/api/auth/send-otp/',
+            'verify_registration_otp': '/api/auth/verify-otp/',
+            'login': '/api/auth/login/',
+            'logout': '/api/auth/logout/',
+            'support': '/api/support/',
+            'admin': '/admin/',
         }
     }, status=status.HTTP_200_OK)
 

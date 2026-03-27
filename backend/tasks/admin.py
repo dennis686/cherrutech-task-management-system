@@ -1,5 +1,5 @@
 from django.contrib import admin
-from .models import Task
+from .models import OTPVerification, Task
 
 @admin.register(Task)
 class TaskAdmin(admin.ModelAdmin):
@@ -19,3 +19,10 @@ class TaskAdmin(admin.ModelAdmin):
             'fields': ('due_date', 'created_at', 'updated_at')
         }),
     )
+
+
+@admin.register(OTPVerification)
+class OTPVerificationAdmin(admin.ModelAdmin):
+    list_display = ["email", "phone", "user", "otp_code", "created_at", "verified_at"]
+    search_fields = ["email", "phone", "user__username"]
+    readonly_fields = ["created_at", "verified_at"]

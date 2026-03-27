@@ -1,51 +1,44 @@
-# Django Task Management Backend
+# TaskFlow Backend
 
-A Django REST API backend for the Task Management System.
+This backend powers the current TaskFlow project.
 
-## Setup
+## What It Includes
 
-1. Create a virtual environment:
-   ```
-   python -m venv venv
-   venv\Scripts\activate
-   ```
+- Task CRUD API
+- Task statistics endpoint
+- Registration with OTP verification
+- Login with OTP verification
+- Console-backed email and SMS OTP delivery for local development
+- Support request endpoint
 
-2. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
+## Main Endpoints
 
-3. Run migrations:
-   ```
-   python manage.py migrate
-   ```
+- `GET /api/tasks/`
+- `POST /api/tasks/`
+- `GET /api/tasks/statistics/`
+- `POST /api/auth/send-otp/`
+- `POST /api/auth/verify-otp/`
+- `POST /api/auth/request-login-otp/`
+- `POST /api/auth/login/`
+- `POST /api/auth/logout/`
+- `POST /api/support/`
 
-4. Create a superuser:
-   ```
-   python manage.py createsuperuser
-   ```
+## Local Run
 
-5. Run the server:
-   ```
-   python manage.py runserver 0.0.0.0:8000
-   ```
+```powershell
+cd backend
+python manage.py migrate
+python manage.py runserver
+```
 
-## API Endpoints
+## Local OTP Behavior
 
-- `GET /api/tasks/` - Get all tasks
-- `POST /api/tasks/` - Create a new task
-- `GET /api/tasks/{id}/` - Get a specific task
-- `PUT /api/tasks/{id}/` - Update a task
-- `PATCH /api/tasks/{id}/` - Partial update
-- `DELETE /api/tasks/{id}/` - Delete a task
+In local development:
 
-## Custom Endpoints
+- email OTPs are printed in the backend terminal
+- SMS OTPs are also printed in the backend terminal
 
-- `GET /api/tasks/completed/` - Get completed tasks
-- `GET /api/tasks/pending/` - Get pending tasks
-- `GET /api/tasks/high_priority/` - Get high priority tasks
-- `GET /api/tasks/statistics/` - Get task statistics
+That is controlled by:
 
-## Admin Panel
-
-Access the admin panel at: http://localhost:8000/admin/
+- `EMAIL_BACKEND = django.core.mail.backends.console.EmailBackend`
+- `SMS_BACKEND = console`

@@ -1,0 +1,41 @@
+# Python
+venv/
+.venv/
+env/
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Django
+backend/db.sqlite3
+backend/staticfiles/
+*.sqlite3
+
+# Environment files
+.env
+backend/.env
+frontend/.env
+*.local
+
+# Logs
+*.log
+logs/
+backend/*.log
+
+# Node / Vite
+node_modules/
+frontend/node_modules/
+frontend/task-management-frontend/node_modules/
+frontend/task-management-frontend/dist/
+dist/
+
+# OS / Editor
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/*
+!.vscode/extensions.json
+
+# Tooling
+.claude/

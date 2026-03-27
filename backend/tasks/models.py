@@ -1,4 +1,26 @@
 from django.db import models
+from django.contrib.auth import get_user_model
+from django.utils import timezone
+import random
+
+
+User = get_user_model()
+
+class OTPVerification(models.Model):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
+    email = models.EmailField(blank=True, null=True)
+    phone = models.CharField(max_length=20, blank=True, null=True)
+    otp_code = models.CharField(max_length=6)
+    created_at = models.DateTimeField(auto_now_add=True)
+    verified_at = models.DateTimeField(blank=True, null=True)
+
+    def generate_otp(self):
+        self.otp_code = str(random.randint(100000, 999999))
+        self.created_at = timezone.now()
+        self.save()
+
+    def __str__(self):
+        return self.email or self.phone or f"OTP #{self.pk}"
 
 class Task(models.Model):
     PRIORITY_CHOICES = [
