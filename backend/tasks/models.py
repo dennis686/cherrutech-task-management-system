@@ -6,6 +6,25 @@ import random
 
 User = get_user_model()
 
+
+class UserProfile(models.Model):
+    ROLE_ADMIN = "admin"
+    ROLE_MANAGER = "manager"
+    ROLE_EMPLOYEE = "employee"
+    ROLE_CHOICES = [
+        (ROLE_ADMIN, "Admin"),
+        (ROLE_MANAGER, "Manager"),
+        (ROLE_EMPLOYEE, "Employee"),
+    ]
+
+    user = models.OneToOneField(User, on_delete=models.CASCADE, related_name="profile")
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default=ROLE_EMPLOYEE)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.user.username} ({self.get_role_display()})"
+
+
 class OTPVerification(models.Model):
     user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     email = models.EmailField(blank=True, null=True)
@@ -28,7 +47,21 @@ class Task(models.Model):
         ('medium', 'Medium'),
         ('high', 'High'),
     ]
-    
+
+    owner = models.ForeignKey(
+        User,
+        on_delete=models.CASCADE,
+        related_name='tasks',
+        blank=True,
+        null=True,
+    )
+    assignee = models.ForeignKey(
+        User,
+        on_delete=models.SET_NULL,
+        related_name='assigned_tasks',
+        blank=True,
+        null=True,
+    )
     title = models.CharField(max_length=255)
     description = models.TextField(blank=True, null=True)
     priority = models.CharField(

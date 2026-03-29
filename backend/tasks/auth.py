@@ -10,11 +10,27 @@ from rest_framework.authtoken.models import Token
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 
-from .models import OTPVerification
+from .models import OTPVerification, UserProfile
 
 
 User = get_user_model()
 OTP_EXPIRY_MINUTES = 10
+
+
+def get_user_role(user):
+    profile = getattr(user, "profile", None)
+    return profile.role if profile else UserProfile.ROLE_EMPLOYEE
+
+
+def validate_role(role):
+    if role not in {
+        UserProfile.ROLE_ADMIN,
+        UserProfile.ROLE_MANAGER,
+        UserProfile.ROLE_EMPLOYEE,
+    }:
+        return UserProfile.ROLE_EMPLOYEE
+
+    return role
 
 
 def normalize_phone(phone):
@@ -35,25 +51,38 @@ def send_sms_otp(phone, otp_code):
 
     raise NotImplementedError("SMS backend is not configured.")
 
-
 def dispatch_otp(otp_code, email=None, phone=None, channel="both"):
     sent_channels = []
+    failed_channels = []
 
+    # EMAIL OTP
     if channel in {"email", "both"} and email:
-      send_mail(
-          "Your TaskFlow OTP",
-          f"Your OTP code is {otp_code}",
-          settings.DEFAULT_FROM_EMAIL,
-          [email],
-          fail_silently=False,
-      )
-      sent_channels.append("email")
+        try:
+            send_mail(
+                "Your TaskFlow OTP",
+                f"Your OTP code is {otp_code}",
+                settings.DEFAULT_FROM_EMAIL,
+                [email],
+                fail_silently=False,
+            )
+            sent_channels.append("email")
+        except Exception as e:
+            print(f"Failed to send email OTP to {email}: {e}")
+            failed_channels.append("email")
 
+    # SMS OTP
     if channel in {"sms", "both"} and phone:
-        send_sms_otp(phone, otp_code)
-        sent_channels.append("sms")
+        try:
+            send_sms_otp(phone, otp_code)
+            sent_channels.append("sms")
+        except Exception as e:
+            print(f"Failed to send SMS OTP to {phone}: {e}")
+            failed_channels.append("sms")
 
-    return sent_channels
+    return {
+        "sent": sent_channels,
+        "failed": failed_channels
+    }
 
 
 def get_or_create_otp_record(email=None, phone=None, user=None):
@@ -120,16 +149,19 @@ def send_otp(request):
     otp_obj.verified_at = None
     otp_obj.save(update_fields=["otp_code", "created_at", "email", "phone", "verified_at"])
 
-    sent_channels = dispatch_otp(otp_obj.otp_code, email=email, phone=phone, channel=channel)
-    channel_message = " and ".join(sent_channels)
+    # Use the updated dispatch_otp
+    result = dispatch_otp(otp_obj.otp_code, email=email, phone=phone, channel=channel)
+    sent_channels = result["sent"]
+    failed_channels = result["failed"]
+    channel_message = " and ".join(sent_channels) if sent_channels else "none"
 
     return Response(
         {
             "message": f"OTP sent via {channel_message}",
-            "channels": sent_channels,
+            "sent_channels": sent_channels,
+            "failed_channels": failed_channels,
         }
     )
-
 
 @api_view(["POST"])
 def verify_otp(request):
@@ -137,6 +169,7 @@ def verify_otp(request):
     email = (data.get("email") or "").strip()
     otp = (data.get("otp") or "").strip()
     username = (data.get("username") or "").strip()
+    role = validate_role((data.get("role") or UserProfile.ROLE_EMPLOYEE).strip().lower())
     password = data.get("password")
     password_confirm = data.get("password_confirm")
 
@@ -172,6 +205,7 @@ def verify_otp(request):
         return Response({"error": "Email already exists"}, status=status.HTTP_400_BAD_REQUEST)
 
     user = User.objects.create_user(username=username, email=email or "", password=password)
+    UserProfile.objects.update_or_create(user=user, defaults={"role": role})
     otp_obj.user = user
     otp_obj.email = user.email
     otp_obj.verified_at = timezone.now()
@@ -184,6 +218,7 @@ def verify_otp(request):
                 "id": user.id,
                 "username": user.username,
                 "email": user.email,
+                "role": role,
             },
         },
         status=status.HTTP_201_CREATED,
@@ -219,6 +254,7 @@ def login(request):
                 "username": user.username,
                 "email": user.email,
                 "phone": otp_record.phone if otp_record else None,
+                "role": get_user_role(user),
             },
             "token": token.key,
         }

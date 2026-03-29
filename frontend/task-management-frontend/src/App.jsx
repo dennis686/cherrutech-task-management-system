@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from "react-router-dom";
 import {
   createTask,
   deleteTaskRequest,
+  fetchAssignableUsers,
   fetchTaskStatistics,
   fetchTasks,
   loginRequest,
@@ -20,6 +21,7 @@ const emptyTaskForm = {
   description: "",
   priority: "medium",
   due_date: "",
+  assignee: "",
 };
 
 const navItems = [
@@ -83,20 +85,36 @@ const homeFeatureCards = [
 const homeRoleCards = [
   {
     title: "Admins",
-    copy: "Oversee users, tasks, and full workspace activity with confidence.",
+    copy: "Oversee users, create and manage tasks, and access all workspace reports and controls.",
     icon: CheckBadgeIcon,
   },
   {
     title: "Managers",
-    copy: "Monitor team output, balance workload, and keep projects moving.",
+    copy: "Create tasks, monitor progress, and review team analytics to keep projects moving.",
     icon: ChartIcon,
   },
   {
     title: "Employees",
-    copy: "View assigned work, update progress, and stay aligned every day.",
+    copy: "See your own tasks, update completion status, and stay aligned every day.",
     icon: BoardIcon,
   },
 ];
+
+const roleLabels = {
+  admin: "Admin",
+  manager: "Manager",
+  employee: "Employee",
+};
+
+const roleRouteAccess = {
+  admin: ["/dashboard", "/board", "/tasks", "/calendar", "/team", "/analytics"],
+  manager: ["/dashboard", "/board", "/tasks", "/calendar", "/team", "/analytics"],
+  employee: ["/dashboard", "/board", "/calendar"],
+};
+
+function getUserRole(user) {
+  return user?.role || "employee";
+}
 
 const homeFaqItems = [
   {
@@ -344,6 +362,7 @@ function App() {
     return storedUser ? JSON.parse(storedUser) : null;
   });
   const [tasks, setTasks] = useState([]);
+  const [assignableUsers, setAssignableUsers] = useState([]);
   const [statistics, setStatistics] = useState(null);
   const [taskForm, setTaskForm] = useState(emptyTaskForm);
   const [editingTaskId, setEditingTaskId] = useState(null);
@@ -354,6 +373,7 @@ function App() {
   const [registerForm, setRegisterForm] = useState({
     username: "",
     email: "",
+    role: "employee",
     password: "",
     password_confirm: "",
     otp: "",
@@ -376,6 +396,7 @@ function App() {
     return initialDate;
   });
   const alertedDueTasksRef = useRef(new Set());
+  const seenAssignedTasksRef = useRef(new Set());
 
   const sortedTasks = useMemo(
     () =>
@@ -610,6 +631,20 @@ function App() {
     [derivedStatistics]
   );
 
+  const teamRoster = useMemo(() => {
+    return assignableUsers.map((member) => {
+      const assignedTasks = tasks.filter((task) => task.assignee === member.id);
+      const completedTasks = assignedTasks.filter((task) => task.completed).length;
+
+      return {
+        ...member,
+        assignedCount: assignedTasks.length,
+        completedCount: completedTasks,
+        activeCount: assignedTasks.length - completedTasks,
+      };
+    });
+  }, [assignableUsers, tasks]);
+
   const calendarData = useMemo(() => {
     const year = calendarMonth.getFullYear();
     const month = calendarMonth.getMonth();
@@ -673,11 +708,27 @@ function App() {
     []
   );
 
+  const currentRole = useMemo(() => getUserRole(user), [user]);
+  const allowedRoutes = useMemo(
+    () => roleRouteAccess[currentRole] || roleRouteAccess.employee,
+    [currentRole]
+  );
+  const visibleNavItems = useMemo(
+    () => navItems.filter((item) => item.path === "/" || allowedRoutes.includes(item.path)),
+    [allowedRoutes]
+  );
+
   useEffect(() => {
     if (!token && protectedPaths.includes(location.pathname)) {
       navigate("/", { replace: true });
     }
   }, [location.pathname, navigate, protectedPaths, token]);
+
+  useEffect(() => {
+    if (token && protectedPaths.includes(location.pathname) && !allowedRoutes.includes(location.pathname)) {
+      navigate("/dashboard", { replace: true });
+    }
+  }, [allowedRoutes, location.pathname, navigate, protectedPaths, token]);
 
   useEffect(() => {
     localStorage.setItem("token", token);
@@ -702,6 +753,7 @@ function App() {
   useEffect(() => {
     if (!token) {
       setTasks([]);
+      setAssignableUsers([]);
       setStatistics(null);
       setLoadingTasks(false);
       alertedDueTasksRef.current.clear();
@@ -710,7 +762,12 @@ function App() {
 
     loadTasks();
     loadStatistics();
-  }, [token]);
+    if (currentRole !== "employee") {
+      loadAssignableUsers();
+    } else {
+      setAssignableUsers([]);
+    }
+  }, [currentRole, token]);
 
   useEffect(() => {
     if (!token || !notificationSounds) {
@@ -738,6 +795,37 @@ function App() {
     playNotificationSound("reminder");
     setMessage(`Reminder: ${newAlerts.length} task${newAlerts.length > 1 ? "s are" : " is"} due soon.`);
   }, [notificationSounds, sortedTasks, token]);
+
+  useEffect(() => {
+    if (!token) {
+      seenAssignedTasksRef.current.clear();
+      return;
+    }
+
+    if (currentRole !== "employee" || !user?.id) {
+      return;
+    }
+
+    const assignedToUser = sortedTasks.filter((task) => task.assignee === user.id);
+    const newAssignments = assignedToUser.filter((task) => !seenAssignedTasksRef.current.has(task.id));
+
+    assignedToUser.forEach((task) => {
+      seenAssignedTasksRef.current.add(task.id);
+    });
+
+    if (!newAssignments.length) {
+      return;
+    }
+
+    playNotificationSound("reminder");
+    setMessage(
+      `You have ${newAssignments.length} new assigned task${newAssignments.length > 1 ? "s" : ""}.`
+    );
+  }, [currentRole, sortedTasks, token, user?.id]);
+
+  function isAssignedToCurrentUser(task) {
+    return Boolean(user?.id && task.assignee === user.id);
+  }
 
   function playNotificationSound(type = "default") {
     if (!notificationSounds || typeof window === "undefined") {
@@ -812,6 +900,16 @@ function App() {
     }
   }
 
+  async function loadAssignableUsers() {
+    try {
+      const data = await fetchAssignableUsers(token);
+      setAssignableUsers(Array.isArray(data) ? data : []);
+    } catch (requestError) {
+      console.error("Failed to load assignable users", requestError);
+      setAssignableUsers([]);
+    }
+  }
+
   function handleTaskFieldChange(event) {
     const { name, value } = event.target;
     setTaskForm((currentForm) => ({ ...currentForm, [name]: value }));
@@ -836,6 +934,7 @@ function App() {
     return {
       title: form.title.trim(),
       description: form.description.trim(),
+      assignee: form.assignee ? Number(form.assignee) : null,
       priority: form.priority,
       completed: false,
       due_date: form.due_date ? `${form.due_date}T00:00:00Z` : null,
@@ -929,6 +1028,7 @@ function App() {
     setTaskForm({
       title: task.title || "",
       description: task.description || "",
+      assignee: task.assignee ? String(task.assignee) : "",
       priority: task.priority || "medium",
       due_date: task.due_date ? task.due_date.slice(0, 10) : "",
     });
@@ -1027,6 +1127,7 @@ function App() {
       setRegisterForm({
         username: "",
         email: "",
+        role: "employee",
         password: "",
         password_confirm: "",
         otp: "",
@@ -1065,6 +1166,7 @@ function App() {
     setRegisterForm({
       username: "",
       email: "",
+      role: "employee",
       password: "",
       password_confirm: "",
       otp: "",
@@ -1185,6 +1287,19 @@ function App() {
                 />
               </label>
               <label>
+                Role
+                <select
+                  name="role"
+                  value={registerForm.role}
+                  onChange={handleRegisterFieldChange}
+                  disabled={otpSent}
+                >
+                  <option value="employee">Employee</option>
+                  <option value="manager">Manager</option>
+                  <option value="admin">Admin</option>
+                </select>
+              </label>
+              <label>
                 Password
                 <input
                   type="password"
@@ -1254,7 +1369,7 @@ function App() {
           </div>
 
           <nav className="sidebar-nav" aria-label="Primary">
-            {navItems.map(({ path, label, icon: Icon }) => (
+            {visibleNavItems.map(({ path, label, icon: Icon }) => (
               <NavLink
                 key={path}
                 to={path}
@@ -1272,7 +1387,9 @@ function App() {
             <div className="avatar">{getInitials(user?.username || "Alex Chen")}</div>
             <div>
               <p className="profile-name">{user?.username || "Alex Chen"}</p>
-              <p className="profile-role">{user ? user.email || "Member" : "Admin"}</p>
+              <p className="profile-role">
+                {user ? `${roleLabels[currentRole] || "Employee"} • ${user.email || "Member"}` : "Admin"}
+              </p>
             </div>
             <button
               type="button"
@@ -1340,19 +1457,58 @@ function App() {
 
         {location.pathname === "/" ? (
           <section className="home-page">
-            <header className="home-brand">
-              <div className="home-brand-mark">
-                <CheckBadgeIcon />
+            <header className="home-topbar">
+              <div className="home-brand">
+                <div className="home-brand-mark">
+                  <CheckBadgeIcon />
+                </div>
+                <div>
+                  <p className="home-brand-title">CherruTech</p>
+                  <p className="home-brand-subtitle">Project command center</p>
+                </div>
               </div>
-              <div>
-                <p className="home-brand-title">CherruTech</p>
-                <p className="home-brand-subtitle">Project command center</p>
-              </div>
+
+              <nav className="home-nav-actions" aria-label="Account navigation">
+                {token ? (
+                  <button
+                    type="button"
+                    className="dark-button home-nav-button"
+                    onClick={() => navigate("/dashboard")}
+                  >
+                    Dashboard
+                  </button>
+                ) : (
+                  <>
+                    <button
+                      type="button"
+                      className={`ghost-button home-nav-button${authMode === "login" ? " home-nav-button-active" : ""}`}
+                      onClick={() => {
+                        resetMessages();
+                        setOtpSent(false);
+                        setAuthMode("login");
+                      }}
+                    >
+                      Login
+                    </button>
+                    <button
+                      type="button"
+                      className={`dark-button home-nav-button${authMode === "register" || otpSent ? " home-nav-button-active" : ""}`}
+                      onClick={() => {
+                        resetMessages();
+                        setAuthMode("register");
+                      }}
+                    >
+                      Register
+                    </button>
+                  </>
+                )}
+              </nav>
             </header>
 
             <section className="home-hero-shell">
               <div className="home-orb home-orb-left" />
               <div className="home-orb home-orb-right" />
+              {token || authMode || otpSent ? renderAuthPanel("home-auth-panel") : null}
               <article className="home-hero">
                 <p className="section-kicker home-kicker">CherruTech Platform</p>
                 <h2>
@@ -1371,22 +1527,21 @@ function App() {
                   <button
                     type="button"
                     className="dark-button home-cta-primary"
-                    onClick={() =>
-                      document
-                        .getElementById("home-auth")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
+                    onClick={() => {
+                      resetMessages();
+                      setAuthMode("register");
+                    }}
                   >
                     Register
                   </button>
                   <button
                     type="button"
                     className="ghost-button home-cta-secondary"
-                    onClick={() =>
-                      document
-                        .getElementById("home-auth")
-                        ?.scrollIntoView({ behavior: "smooth" })
-                    }
+                    onClick={() => {
+                      resetMessages();
+                      setOtpSent(false);
+                      setAuthMode("login");
+                    }}
                   >
                     Login
                   </button>
@@ -1557,8 +1712,6 @@ function App() {
                 ))}
               </div>
             </section>
-
-            <div id="home-auth">{renderAuthPanel("home-auth-panel")}</div>
           </section>
         ) : null}
 
@@ -1610,7 +1763,13 @@ function App() {
                           <td>
                             <div className="task-cell">
                               <strong>{task.title}</strong>
-                              <span>{task.description || "No description added"}</span>
+                              <span>
+                                {task.description || "No description added"}
+                                {task.assignee_name ? ` • Assigned to ${task.assignee_name}` : ""}
+                              </span>
+                              {isAssignedToCurrentUser(task) ? (
+                                <span className="assignment-badge">Assigned to you</span>
+                              ) : null}
                             </div>
                           </td>
                           <td>
@@ -1682,15 +1841,17 @@ function App() {
                 </div>
               </div>
               <div className="quick-links-list">
-                <NavLink className="quick-link-card" to="/tasks">
-                  <div className="quick-link-icon">
-                    <PlusIcon />
-                  </div>
-                  <div>
-                    <strong>Add Task</strong>
-                    <p>Create a new task or edit one you selected from the dashboard.</p>
-                  </div>
-                </NavLink>
+                {currentRole !== "employee" ? (
+                  <NavLink className="quick-link-card" to="/tasks">
+                    <div className="quick-link-icon">
+                      <PlusIcon />
+                    </div>
+                    <div>
+                      <strong>Add Task</strong>
+                      <p>Create a new task or edit one you selected from the dashboard.</p>
+                    </div>
+                  </NavLink>
+                ) : null}
                 <NavLink className="quick-link-card" to="/board">
                   <div className="quick-link-icon">
                     <BoardIcon />
@@ -1700,15 +1861,17 @@ function App() {
                     <p>View work by status and move between open, urgent, and completed items.</p>
                   </div>
                 </NavLink>
-                <NavLink className="quick-link-card" to="/analytics">
-                  <div className="quick-link-icon">
-                    <ChartIcon />
-                  </div>
-                  <div>
-                    <strong>Analytics</strong>
-                    <p>Check progress trends, completion rate, and task distribution at a glance.</p>
-                  </div>
-                </NavLink>
+                {currentRole !== "employee" ? (
+                  <NavLink className="quick-link-card" to="/analytics">
+                    <div className="quick-link-icon">
+                      <ChartIcon />
+                    </div>
+                    <div>
+                      <strong>Analytics</strong>
+                      <p>Check progress trends, completion rate, and task distribution at a glance.</p>
+                    </div>
+                  </NavLink>
+                ) : null}
               </div>
             </article>
             </aside>
@@ -1746,12 +1909,18 @@ function App() {
                           <article className="board-task" key={task.id}>
                             <div className="board-task-top">
                               <strong>{task.title}</strong>
-                              <span className={`priority-pill ${task.priority}`}>
-                                {getPriorityLabel(task.priority)}
-                              </span>
+                              <div className="board-task-badges">
+                                {isAssignedToCurrentUser(task) ? (
+                                  <span className="assignment-badge">Assigned to you</span>
+                                ) : null}
+                                <span className={`priority-pill ${task.priority}`}>
+                                  {getPriorityLabel(task.priority)}
+                                </span>
+                              </div>
                             </div>
                             <p>{task.description || "No description added yet."}</p>
-                            <div className="board-task-meta">
+                          <div className="board-task-meta">
+                              <span>{task.assignee_name ? `Assigned to ${task.assignee_name}` : "Unassigned"}</span>
                               <span>{formatRelativeDueDate(task.due_date)}</span>
                               <span>{task.completed ? "Completed" : "Active"}</span>
                             </div>
@@ -1922,6 +2091,20 @@ function App() {
 
         {location.pathname === "/tasks" ? (
           <section className="task-form-only">
+            {currentRole === "employee" ? (
+              <article className="surface quick-add-panel">
+                <div className="panel-heading">
+                  <div>
+                    <p className="section-kicker">Role access</p>
+                    <h2>Employees cannot create tasks</h2>
+                  </div>
+                </div>
+                <p className="task-form-note">
+                  Your current role lets you view tasks and update completion from the board or dashboard. Ask a manager
+                  or admin to create new tasks.
+                </p>
+              </article>
+            ) : (
             <article className="surface quick-add-panel">
               <div className="panel-heading">
                 <div>
@@ -1961,6 +2144,21 @@ function App() {
                   />
                 </label>
                 <div className="inline-fields">
+                  <label>
+                    Assignee
+                    <select
+                      name="assignee"
+                      value={taskForm.assignee}
+                      onChange={handleTaskFieldChange}
+                    >
+                      <option value="">Select employee</option>
+                      {assignableUsers.map((person) => (
+                        <option key={person.id} value={person.id}>
+                          {person.username} ({roleLabels[person.role] || "Employee"})
+                        </option>
+                      ))}
+                    </select>
+                  </label>
                   <label>
                     Priority
                     <select
@@ -2002,6 +2200,7 @@ function App() {
                 to review the full task list.
               </p>
             </article>
+            )}
           </section>
         ) : null}
 
@@ -2081,11 +2280,17 @@ function App() {
                     <article className="board-task" key={task.id}>
                       <div className="board-task-top">
                         <strong>{task.title}</strong>
-                        <span className={`priority-pill ${task.priority}`}>
-                          {getPriorityLabel(task.priority)}
-                        </span>
+                        <div className="board-task-badges">
+                          {isAssignedToCurrentUser(task) ? (
+                            <span className="assignment-badge">Assigned to you</span>
+                          ) : null}
+                          <span className={`priority-pill ${task.priority}`}>
+                            {getPriorityLabel(task.priority)}
+                          </span>
+                        </div>
                       </div>
                       <div className="board-task-meta">
+                        <span>{task.assignee_name ? `Assigned to ${task.assignee_name}` : "Unassigned"}</span>
                         <span>{formatDisplayDate(task.due_date)}</span>
                         <span>{formatRelativeDueDate(task.due_date)}</span>
                       </div>
@@ -2102,32 +2307,36 @@ function App() {
             <div className="panel-heading">
               <div>
                 <p className="section-kicker">Team</p>
-                <h2>Workload snapshot</h2>
+                <h2>Registered team members</h2>
               </div>
             </div>
-            <div className="breakdown-list">
-              <div className="breakdown-item">
-                <div className="breakdown-copy">
-                  <strong>Total tasks</strong>
-                  <span>Items currently tracked</span>
-                </div>
-                <span className="breakdown-percent">{derivedStatistics.total}</span>
+            {currentRole === "employee" ? (
+              <p className="empty-state">Employees do not have access to the full registered team list.</p>
+            ) : teamRoster.length === 0 ? (
+              <p className="empty-state">No registered employees or managers found yet.</p>
+            ) : (
+              <div className="team-roster">
+                {teamRoster.map((member) => (
+                  <article className="team-member-card" key={member.id}>
+                    <div className="team-member-head">
+                      <div className="avatar">{getInitials(member.username)}</div>
+                      <div>
+                        <strong>{member.username}</strong>
+                        <p>{member.email || "No email set"}</p>
+                      </div>
+                      <span className={`priority-pill ${member.role === "manager" ? "medium" : "low"}`}>
+                        {roleLabels[member.role] || "Employee"}
+                      </span>
+                    </div>
+                    <div className="team-member-stats">
+                      <span>Assigned: {member.assignedCount}</span>
+                      <span>Active: {member.activeCount}</span>
+                      <span>Completed: {member.completedCount}</span>
+                    </div>
+                  </article>
+                ))}
               </div>
-              <div className="breakdown-item">
-                <div className="breakdown-copy">
-                  <strong>Completed</strong>
-                  <span>Finished work</span>
-                </div>
-                <span className="breakdown-percent">{derivedStatistics.completed}</span>
-              </div>
-              <div className="breakdown-item">
-                <div className="breakdown-copy">
-                  <strong>High priority</strong>
-                  <span>Needs attention soon</span>
-                </div>
-                <span className="breakdown-percent">{derivedStatistics.high_priority}</span>
-              </div>
-            </div>
+            )}
           </section>
         ) : null}
       </main>

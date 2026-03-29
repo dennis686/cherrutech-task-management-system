@@ -48,6 +48,10 @@ export function fetchTaskStatistics(token) {
   return request("/tasks/statistics/", { token, hasJsonBody: false });
 }
 
+export function fetchAssignableUsers(token) {
+  return request("/tasks/assignable_users/", { token, hasJsonBody: false });
+}
+
 export function createTask(token, payload) {
   return request("/tasks/", {
     method: "POST",

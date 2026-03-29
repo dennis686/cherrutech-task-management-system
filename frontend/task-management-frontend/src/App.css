@@ -474,6 +474,15 @@ button {
   pointer-events: none;
 }
 
+.home-topbar {
+  position: relative;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
 .home-hero-shell,
 .home-section {
   position: relative;
@@ -484,6 +493,21 @@ button {
   display: grid;
   gap: 28px;
   overflow: hidden;
+}
+
+.home-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.home-nav-button {
+  min-width: 116px;
+}
+
+.home-nav-button-active {
+  box-shadow: 0 0 0 1px rgba(46, 211, 161, 0.35);
 }
 
 .home-orb {
@@ -822,6 +846,8 @@ button {
 
 .home-auth-panel {
   z-index: 1;
+  width: min(640px, 100%);
+  margin: 0 auto;
   padding: 26px;
 }
 
@@ -997,6 +1023,48 @@ button {
   height: 18px;
 }
 
+.team-roster {
+  display: grid;
+  gap: 16px;
+}
+
+.team-member-card {
+  display: grid;
+  gap: 14px;
+  padding: 18px;
+  border-radius: 20px;
+  border: 1px solid var(--border);
+  background: linear-gradient(180deg, #fbfcff 0%, #f4f7fd 100%);
+}
+
+.team-member-head,
+.team-member-stats {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.team-member-head {
+  justify-content: space-between;
+  flex-wrap: wrap;
+}
+
+.team-member-head strong,
+.team-member-head p,
+.team-member-stats span {
+  margin: 0;
+}
+
+.team-member-head p {
+  color: var(--muted);
+}
+
+.team-member-stats {
+  flex-wrap: wrap;
+  color: var(--muted);
+  font-size: 0.92rem;
+}
+
 .panel-heading {
   align-items: flex-start;
   margin-bottom: 20px;
@@ -1086,6 +1154,19 @@ label {
   color: #53627f;
 }
 
+.assignment-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  border-radius: 999px;
+  padding: 6px 10px;
+  background: rgba(46, 211, 161, 0.16);
+  color: #1f8f63;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
 .status-pill.done,
 .priority-pill.low {
   background: var(--success-bg);
@@ -1148,6 +1229,13 @@ label {
 .board-task p,
 .board-task-meta {
   color: var(--muted);
+}
+
+.board-task-badges {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .board-column-list {
@@ -1825,6 +1913,19 @@ svg {
 
   .home-brand {
     align-items: flex-start;
+  }
+
+  .home-topbar {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .home-nav-actions {
+    width: 100%;
+  }
+
+  .home-nav-button {
+    flex: 1 1 160px;
   }
 
   .home-brand-mark {
