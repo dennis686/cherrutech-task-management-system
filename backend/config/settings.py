@@ -19,7 +19,7 @@ DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     host.strip()
-    for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost').split(',')
+    for host in os.getenv('ALLOWED_HOSTS', '127.0.0.1,localhost,cherrutech-backend.onrender.com').split(',')
     if host.strip()
 ]
 
