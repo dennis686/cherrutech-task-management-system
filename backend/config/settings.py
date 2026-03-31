@@ -15,7 +15,7 @@ load_dotenv(BASE_DIR / ".env")
 SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-change-in-production')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DEBUG', 'True').lower() == 'true'
+DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -86,7 +86,7 @@ if dj_database_url and os.getenv('DATABASE_URL'):
     }
     
 
-    
+
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {
