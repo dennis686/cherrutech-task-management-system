@@ -147,6 +147,16 @@ def support_ticket(request):
 # -----------------------------
 # OTP Login Views
 # -----------------------------
+import random
+import logging
+from django.conf import settings
+from django.core.mail import send_mail
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from rest_framework import status
+
+logger = logging.getLogger(__name__)
+
 @api_view(["POST"])
 def send_otp(request):
     """
@@ -162,32 +172,65 @@ def send_otp(request):
         return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
 
     otp = str(random.randint(100000, 999999))
-    request.session[f"otp_for_{user.id}"] = otp  # Store OTP in session
-    send_otp_email(user.email, otp)  # Send via SMTP
+    
+    # Store OTP in session (you may want to add expiration later)
+    request.session[f"otp_for_{user.id}"] = otp
+    request.session.set_expiry(600)  # 10 minutes expiry (optional but recommended)
 
-    return Response({"message": f"OTP sent to {email}"}, status=status.HTTP_200_OK)
+    # Send email with good error handling
+    success = send_otp_email(user.email, otp)
+
+    if success:
+        return Response({"message": f"OTP sent to {email}"}, status=status.HTTP_200_OK)
+    else:
+        # In development, still tell user it was "sent" but show OTP in logs
+        if settings.DEBUG:
+            return Response({
+                "message": f"OTP generated. Check backend terminal (email sending failed)."
+            }, status=status.HTTP_200_OK)
+        else:
+            return Response({"error": "Failed to send OTP. Please try again later."}, 
+                          status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 
-@api_view(["POST"])
-def verify_otp(request):
-    """
-    Verifies the OTP entered by the user.
-    """
-    email = request.data.get("email")
-    otp_entered = request.data.get("otp")
+def send_otp_email(to_email: str, otp: str):
+    """Helper function to send OTP email with proper logging"""
+    subject = "Your OTP Code - Verification"
+    message = f"""Hello,
 
-    if not email or not otp_entered:
-        return Response({"error": "Email and OTP are required"}, status=status.HTTP_400_BAD_REQUEST)
+Your verification OTP is: {otp}
+
+This code will expire in 10 minutes.
+
+If you didn't request this, please ignore this email.
+
+Best regards,
+Your App Team
+"""
 
     try:
-        user = User.objects.get(email=email)
-    except User.DoesNotExist:
-        return Response({"error": "User not found"}, status=status.HTTP_404_NOT_FOUND)
+        sent = send_mail(
+            subject=subject,
+            message=message,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[to_email],
+            fail_silently=False,   # Important: Raise error so we can catch it
+        )
 
-    otp_saved = request.session.get(f"otp_for_{user.id}")
+        if sent > 0:
+            logger.info(f"✅ OTP sent successfully to {to_email} | OTP: {otp}")
+            print(f"✅ OTP sent to {to_email} → {otp}")   # Visible in terminal
+            return True
+        else:
+            logger.warning(f"⚠️ send_mail returned 0 for {to_email}")
+            return False
 
-    if otp_saved and otp_entered == otp_saved:
-        # OTP verified successfully → you can log in user or return token
-        return Response({"message": "OTP verified successfully."}, status=status.HTTP_200_OK)
-    else:
-        return Response({"error": "Invalid OTP."}, status=status.HTTP_400_BAD_REQUEST)
+    except Exception as e:
+        logger.error(f"❌ Failed to send OTP to {to_email}: {str(e)}", exc_info=True)
+        print(f"❌ EMAIL ERROR for {to_email}: {type(e).__name__} - {e}")
+        
+        # Fallback: Always show OTP in terminal during local development
+        if settings.DEBUG:
+            print(f"\n🔑 DEBUG OTP (email failed) → {otp} for {to_email}\n")
+        
+        return False
