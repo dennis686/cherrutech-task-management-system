@@ -38,8 +38,8 @@ INSTALLED_APPS = [
 ]
 
 MIDDLEWARE = [
-    'django.middleware.security.SecurityMiddleware',
     'corsheaders.middleware.CorsMiddleware',
+    'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -84,8 +84,13 @@ if dj_database_url and os.getenv('DATABASE_URL'):
             conn_health_checks=True,
         )
     }
-    
-
+else:
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.sqlite3',
+            'NAME': BASE_DIR / 'db.sqlite3',
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -142,9 +147,17 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         'CORS_ALLOWED_ORIGINS',
-        'http://cherrutech-task-management-system.vercel.app,http://localhost:3000,http://127.0.0.1:3000'
+        'https://cherrutech-task-management-system.vercel.app,https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000'
     ).split(',')
     if origin.strip()
+]
+CORS_ALLOWED_ORIGIN_REGEXES = [
+    r"^https://.*\.vercel\.app$",
+]
+
+CORS_ALLOWED_ORIGINS += [
+    "http://localhost:3000",
+    "http://127.0.0.1:3000",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
