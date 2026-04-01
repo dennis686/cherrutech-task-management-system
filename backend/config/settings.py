@@ -158,6 +158,7 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOWED_ORIGINS += [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "https://cherrutech-task-management-system.vercel.app,https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app"
 ]
 
 CORS_ALLOW_CREDENTIALS = True
