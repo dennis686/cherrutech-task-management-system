@@ -100,4 +100,21 @@ Recommended settings:
 
 - Framework preset: `Vite`
 - Build command: `npm run build`
+- Output directory: `dist`
 
+## Vercel Setup
+
+When deploying this frontend to Vercel:
+
+- Project root: `frontend/task-management-frontend`
+- Framework preset: `Vite`
+- Build command: `npm run build`
+- Output directory: `dist`
+
+Set this environment variable in Vercel:
+
+```env
+VITE_API_URL=https://cherrutech-backend.onrender.com/api
+```
+
+Keep the local `.env` pointing to your local backend for development, and use the Vercel environment variable for production.
