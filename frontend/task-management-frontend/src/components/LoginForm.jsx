@@ -3,6 +3,7 @@ function LoginForm({
   onChange,
   onSubmit,
   busyAction,
+  onForgotPassword,
 }) {
   return (
     <form className="stack-form" onSubmit={onSubmit}>
@@ -32,6 +33,14 @@ function LoginForm({
         disabled={busyAction === "login"}
       >
         {busyAction === "login" ? "Signing in..." : "Login"}
+      </button>
+      <button
+        type="button"
+        className="text-button"
+        onClick={onForgotPassword}
+        disabled={busyAction === "login"}
+      >
+        Forgot password?
       </button>
     </form>
   );

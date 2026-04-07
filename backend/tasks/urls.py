@@ -1,7 +1,15 @@
 from django.urls import include, path
 from rest_framework.routers import DefaultRouter
 
-from .auth import login, logout, register, send_otp, verify_otp
+from .auth import (
+    login,
+    logout,
+    register,
+    request_password_reset,
+    reset_password,
+    send_otp,
+    verify_otp,
+)
 from .views import TaskViewSet, support_ticket
 
 
@@ -16,5 +24,7 @@ urlpatterns = [
     path("auth/logout/", logout, name="logout"),
     path("auth/send-otp/", send_otp, name="send_otp"),
     path("auth/verify-otp/", verify_otp, name="verify_otp"),
+    path("auth/request-password-reset/", request_password_reset, name="request_password_reset"),
+    path("auth/reset-password/", reset_password, name="reset_password"),
     path("support/", support_ticket, name="support_ticket"),
 ]

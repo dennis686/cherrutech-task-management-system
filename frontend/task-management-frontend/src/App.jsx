@@ -8,6 +8,8 @@ import {
   fetchTasks,
   loginRequest,
   logoutRequest,
+  requestPasswordReset,
+  resetPassword,
   sendRegistrationOtp,
   updateTask,
   verifyRegistrationOtp,
@@ -379,6 +381,13 @@ function App() {
     otp: "",
   });
   const [otpSent, setOtpSent] = useState(false);
+  const [resetOtpSent, setResetOtpSent] = useState(false);
+  const [resetPasswordForm, setResetPasswordForm] = useState({
+    email: "",
+    otp: "",
+    new_password: "",
+    password_confirm: "",
+  });
   const [loadingTasks, setLoadingTasks] = useState(true);
   const [busyAction, setBusyAction] = useState("");
   const [error, setError] = useState("");
@@ -925,6 +934,11 @@ function App() {
     setRegisterForm((currentForm) => ({ ...currentForm, [name]: value }));
   }
 
+  function handleResetPasswordFieldChange(event) {
+    const { name, value } = event.target;
+    setResetPasswordForm((currentForm) => ({ ...currentForm, [name]: value }));
+  }
+
   function resetMessages() {
     setError("");
     setMessage("");
@@ -1098,7 +1112,7 @@ function App() {
       });
       setOtpSent(true);
       setAuthMode("register");
-      setMessage(`${data.message}. In local development, the email OTP code is printed in the backend terminal.`);
+      setMessage(data.message);
       playNotificationSound("subtle");
     } catch (requestError) {
       setError(requestError.message);
@@ -1160,9 +1174,78 @@ function App() {
     }
   }
 
+  async function handleRequestPasswordReset(event) {
+    event.preventDefault();
+    resetMessages();
+
+    if (!resetPasswordForm.email.trim()) {
+      setError("Provide the email address for the account you want to recover.");
+      return;
+    }
+
+    setBusyAction("request-reset-otp");
+
+    try {
+      const data = await requestPasswordReset({ email: resetPasswordForm.email });
+      setResetOtpSent(true);
+      setMessage(data.message);
+      playNotificationSound("subtle");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusyAction("");
+    }
+  }
+
+  async function handleResetPasswordSubmit(event) {
+    event.preventDefault();
+    resetMessages();
+
+    if (
+      !resetPasswordForm.email.trim() ||
+      !resetPasswordForm.otp.trim() ||
+      !resetPasswordForm.new_password ||
+      !resetPasswordForm.password_confirm
+    ) {
+      setError("Complete the full reset form before submitting.");
+      return;
+    }
+
+    if (resetPasswordForm.new_password !== resetPasswordForm.password_confirm) {
+      setError("Passwords do not match.");
+      return;
+    }
+
+    setBusyAction("reset-password");
+
+    try {
+      const data = await resetPassword(resetPasswordForm);
+      setLoginForm((currentForm) => ({
+        ...currentForm,
+        username: "",
+        password: "",
+      }));
+      setResetPasswordForm({
+        email: "",
+        otp: "",
+        new_password: "",
+        password_confirm: "",
+      });
+      setResetOtpSent(false);
+      setAuthMode("login");
+      setMessage(data.message);
+      playNotificationSound("success");
+    } catch (requestError) {
+      setError(requestError.message);
+    } finally {
+      setBusyAction("");
+    }
+  }
+
   function closeAuthMode() {
     setAuthMode("");
     setOtpSent(false);
+    setResetOtpSent(false);
     setRegisterForm({
       username: "",
       email: "",
@@ -1170,6 +1253,12 @@ function App() {
       password: "",
       password_confirm: "",
       otp: "",
+    });
+    setResetPasswordForm({
+      email: "",
+      otp: "",
+      new_password: "",
+      password_confirm: "",
     });
     resetMessages();
   }
@@ -1189,8 +1278,12 @@ function App() {
                   ? "Verify your OTP"
                   : authMode === "login"
                     ? "Sign in to CherruTech"
+                    : authMode === "forgot-password"
+                      ? resetOtpSent
+                        ? "Choose a new password"
+                        : "Reset your password"
                     : authMode === "register"
-                      ? "Create your account"
+                      ? "Create your manager or employee account"
                       : "Choose how to continue"}
             </h2>
           </div>
@@ -1208,8 +1301,8 @@ function App() {
         ) : !authMode && !otpSent ? (
           <div className="auth-choice-panel">
             <p className="auth-choice-copy">
-              Choose one option to continue. You can sign in with your account or
-              create a new one from here.
+              Choose one option to continue. Managers and employees can create
+              new accounts here, and existing users can sign in.
             </p>
             <div className="auth-choice-actions">
               <button
@@ -1246,7 +1339,89 @@ function App() {
               onChange={handleLoginFieldChange}
               onSubmit={handleLogin}
               busyAction={busyAction}
+              onForgotPassword={() => {
+                resetMessages();
+                setOtpSent(false);
+                setResetOtpSent(false);
+                setAuthMode("forgot-password");
+              }}
             />
+          </div>
+        ) : authMode === "forgot-password" ? (
+          <div className="auth-single-form">
+            <div className="auth-form-topbar">
+              <button
+                type="button"
+                className="text-button"
+                onClick={closeAuthMode}
+                disabled={busyAction === "request-reset-otp" || busyAction === "reset-password"}
+              >
+                Back
+              </button>
+            </div>
+            <form
+              className="stack-form register-form"
+              onSubmit={resetOtpSent ? handleResetPasswordSubmit : handleRequestPasswordReset}
+            >
+              <h3>{resetOtpSent ? "Reset password" : "Forgot password"}</h3>
+              <label>
+                Email
+                <input
+                  type="email"
+                  name="email"
+                  value={resetPasswordForm.email}
+                  onChange={handleResetPasswordFieldChange}
+                  disabled={resetOtpSent}
+                  placeholder="name@example.com"
+                />
+              </label>
+              {resetOtpSent ? (
+                <>
+                  <label>
+                    OTP code
+                    <input
+                      name="otp"
+                      value={resetPasswordForm.otp}
+                      onChange={handleResetPasswordFieldChange}
+                      placeholder="Enter the 6-digit code"
+                    />
+                  </label>
+                  <label>
+                    New password
+                    <input
+                      type="password"
+                      name="new_password"
+                      value={resetPasswordForm.new_password}
+                      onChange={handleResetPasswordFieldChange}
+                      placeholder="Enter a new password"
+                    />
+                  </label>
+                  <label>
+                    Confirm new password
+                    <input
+                      type="password"
+                      name="password_confirm"
+                      value={resetPasswordForm.password_confirm}
+                      onChange={handleResetPasswordFieldChange}
+                      placeholder="Repeat the new password"
+                    />
+                  </label>
+                </>
+              ) : null}
+              <button
+                type="submit"
+                className="soft-button full-width"
+                disabled={busyAction === "request-reset-otp" || busyAction === "reset-password"}
+              >
+                {busyAction === "request-reset-otp"
+                  ? "Sending reset OTP..."
+                  : busyAction === "reset-password"
+                    ? "Resetting password..."
+                    : resetOtpSent
+                      ? "Reset password"
+                      : "Send reset OTP"}
+              </button>
+            </form>
           </div>
         ) : (
           <div className="auth-single-form">
@@ -1296,7 +1471,6 @@ function App() {
                 >
                   <option value="employee">Employee</option>
                   <option value="manager">Manager</option>
-                  <option value="admin">Admin</option>
                 </select>
               </label>
               <label>
@@ -2096,7 +2270,7 @@ function App() {
                 <div className="panel-heading">
                   <div>
                     <p className="section-kicker">Role access</p>
-                    <h2>Employees cannot create tasks</h2>
+                    <h2>Task creation is unavailable</h2>
                   </div>
                 </div>
                 <p className="task-form-note">

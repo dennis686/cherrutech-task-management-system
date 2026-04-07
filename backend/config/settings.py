@@ -16,6 +16,7 @@ SECRET_KEY = os.getenv('SECRET_KEY', 'django-insecure-your-secret-key-change-in-
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv('DEBUG', 'False').lower() == 'true'
+LOCAL_DEV = os.getenv('LOCAL_DEV', 'False').lower() == 'true'
 
 ALLOWED_HOSTS = [
     host.strip()
@@ -147,7 +148,7 @@ CORS_ALLOWED_ORIGINS = [
     origin.strip()
     for origin in os.getenv(
         'CORS_ALLOWED_ORIGINS',
-        'https://cherrutech-task-management-system.vercel.app,https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000'
+        'https://cherrutech-task-management-system.vercel.app,https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app,http://localhost:3000,http://127.0.0.1:3000,http://localhost:5173,http://127.0.0.1:5173,http://localhost:5174,http://127.0.0.1:5174'
     ).split(',')
     if origin.strip()
 ]
@@ -158,8 +159,14 @@ CORS_ALLOWED_ORIGIN_REGEXES = [
 CORS_ALLOWED_ORIGINS += [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "https://cherrutech-task-management-system.vercel.app,https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app"
+    "http://localhost:5173",
+    "http://127.0.0.1:5173",
+    "http://localhost:5174",
+    "http://127.0.0.1:5174",
+    "https://cherrutech-task-management-system.vercel.app",
+    "https://cherrutech-task-management-system-kzlq1bjwh-dennis686s-projects.vercel.app",
 ]
+CORS_ALLOWED_ORIGINS = list(dict.fromkeys(CORS_ALLOWED_ORIGINS))
 
 CORS_ALLOW_CREDENTIALS = True
 CSRF_TRUSTED_ORIGINS = [
@@ -168,7 +175,10 @@ CSRF_TRUSTED_ORIGINS = [
     if origin.strip()
 ]
 
-EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
+EMAIL_BACKEND = os.getenv(
+    'EMAIL_BACKEND',
+    'django.core.mail.backends.smtp.EmailBackend'
+)
 EMAIL_HOST = os.getenv('EMAIL_HOST')
 EMAIL_PORT = int(os.getenv('EMAIL_PORT', 587))
 EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER')
@@ -178,7 +188,7 @@ EMAIL_USE_SSL = os.getenv('EMAIL_USE_SSL', 'False').lower() == 'true'
 DEFAULT_FROM_EMAIL = os.getenv('DEFAULT_FROM_EMAIL', EMAIL_HOST_USER)
 
 # Security settings for production
-if not DEBUG:
+if not DEBUG and not LOCAL_DEV:
     SECURE_SSL_REDIRECT = True
     SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
     SESSION_COOKIE_SECURE = True

@@ -1,4 +1,4 @@
-from django.contrib.auth import get_user_model
+from django.contrib.auth import get_user_model, authenticate
 from django.core.exceptions import ObjectDoesNotExist
 from django.db.models import Q
 from rest_framework import status, viewsets
@@ -36,8 +36,9 @@ class TaskViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         role = self.get_role()
         if role in {UserProfile.ROLE_ADMIN, UserProfile.ROLE_MANAGER}:
-            return Task.objects.all()
-        return Task.objects.filter(Q(assignee=self.request.user) | Q(owner=self.request.user)).distinct()
+            return Task.objects.all()  # Managers can view all tasks
+        elif role == UserProfile.ROLE_EMPLOYEE:
+            raise PermissionDenied("You do not have access to this task list.")
 
     def perform_create(self, serializer):
         role = self.get_role()
@@ -234,3 +235,29 @@ Your App Team
             print(f"\n🔑 DEBUG OTP (email failed) → {otp} for {to_email}\n")
         
         return False
+
+
+# -----------------------------
+# Admin Login View
+# -----------------------------
+@api_view(["POST"])
+def admin_login(request):
+    if request.method == "POST":
+        username = request.POST.get("username")
+        password = request.POST.get("password")
+        user = authenticate(request, username=username, password=password)
+        
+        if user:
+            try:
+                profile = user.profile
+                if profile.role == UserProfile.ROLE_ADMIN and not profile.is_approved:
+                    return JsonResponse({"error": "Admin approval pending."}, status=403)
+            except UserProfile.DoesNotExist:
+                return JsonResponse({"error": "User profile not found."}, status=404)
+            
+            # Proceed with login
+            return JsonResponse({"message": "Login successful."})
+        else:
+            return JsonResponse({"error": "Invalid credentials."}, status=401)
+
+    return JsonResponse({"error": "Invalid request method."}, status=400)

@@ -1,5 +1,5 @@
 const API_BASE_URL =
-  import.meta.env.VITE_API_URL || " https://cherrutech-backend.onrender.com";
+  import.meta.env.VITE_API_URL || "http://127.0.0.1:8000/api";
 
 function buildHeaders(token, hasJsonBody = true) {
   const headers = {};
@@ -31,10 +31,32 @@ async function request(path, { token = "", hasJsonBody = true, ...options } = {}
   }
 
   const text = await response.text();
-  const data = text ? JSON.parse(text) : null;
+  const contentType = response.headers.get("content-type") || "";
+  const isJsonResponse = contentType.includes("application/json");
+  let data = null;
+
+  if (text) {
+    if (isJsonResponse) {
+      try {
+        data = JSON.parse(text);
+      } catch (error) {
+        throw new Error("The backend returned invalid JSON.");
+      }
+    } else {
+      data = text;
+    }
+  }
 
   if (!response.ok) {
-    throw new Error(data?.error || data?.detail || "Request failed");
+    if (isJsonResponse && data && typeof data === "object") {
+      throw new Error(data.error || data.detail || "Request failed");
+    }
+
+    throw new Error(
+      typeof data === "string" && data.trim()
+        ? data.trim()
+        : `Request failed with status ${response.status}`
+    );
   }
 
   return data;
@@ -85,6 +107,20 @@ export function sendRegistrationOtp(payload) {
 
 export function verifyRegistrationOtp(payload) {
   return request("/auth/verify-otp/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function requestPasswordReset(payload) {
+  return request("/auth/request-password-reset/", {
+    method: "POST",
+    body: JSON.stringify(payload),
+  });
+}
+
+export function resetPassword(payload) {
+  return request("/auth/reset-password/", {
     method: "POST",
     body: JSON.stringify(payload),
   });

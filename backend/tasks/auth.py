@@ -24,7 +24,6 @@ def get_user_role(user):
 
 def validate_role(role):
     if role not in {
-        UserProfile.ROLE_ADMIN,
         UserProfile.ROLE_MANAGER,
         UserProfile.ROLE_EMPLOYEE,
     }:
@@ -303,3 +302,91 @@ def logout(request):
 
     django_logout(request)
     return Response({"message": "Logout successful"})
+
+
+@api_view(["POST"])
+def request_password_reset(request):
+    email = (request.data.get("email") or "").strip()
+
+    if not email:
+        return Response(
+            {"error": "Email is required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "No user account was found with that email address."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    otp_obj = get_or_create_otp_record(user=user, email=user.email or email)
+    otp_obj.otp_code = generate_otp_code()
+    otp_obj.created_at = timezone.now()
+    otp_obj.email = user.email or email
+    otp_obj.verified_at = None
+    otp_obj.save(update_fields=["otp_code", "created_at", "email", "verified_at"])
+
+    result = dispatch_otp(otp_obj.otp_code, email=otp_obj.email, channel="email")
+    if "email" not in result["sent"]:
+        return Response(
+            {"error": "We could not send the reset OTP email. Please try again."},
+            status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        )
+
+    return Response({"message": "Password reset OTP sent to your email."})
+
+
+@api_view(["POST"])
+def reset_password(request):
+    email = (request.data.get("email") or "").strip()
+    otp = (request.data.get("otp") or "").strip()
+    new_password = request.data.get("new_password")
+    password_confirm = request.data.get("password_confirm")
+
+    if not email or not otp or not new_password or not password_confirm:
+        return Response(
+            {"error": "Email, OTP, new_password, and password_confirm are required."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if new_password != password_confirm:
+        return Response(
+            {"error": "Passwords do not match."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    try:
+        user = User.objects.get(email=email)
+    except User.DoesNotExist:
+        return Response(
+            {"error": "No user account was found with that email address."},
+            status=status.HTTP_404_NOT_FOUND,
+        )
+
+    otp_obj = OTPVerification.objects.filter(user=user).first()
+    if otp_obj is None or not otp_obj.otp_code:
+        return Response(
+            {"error": "No password reset OTP was found for this account."},
+            status=status.HTTP_400_BAD_REQUEST,
+        )
+
+    if is_otp_expired(otp_obj):
+        otp_obj.otp_code = ""
+        otp_obj.verified_at = None
+        otp_obj.save(update_fields=["otp_code", "verified_at"])
+        return Response({"error": "OTP expired"}, status=status.HTTP_400_BAD_REQUEST)
+
+    if otp_obj.otp_code != otp:
+        return Response({"error": "Invalid OTP"}, status=status.HTTP_400_BAD_REQUEST)
+
+    user.set_password(new_password)
+    user.save(update_fields=["password"])
+    Token.objects.filter(user=user).delete()
+    otp_obj.otp_code = ""
+    otp_obj.verified_at = timezone.now()
+    otp_obj.save(update_fields=["otp_code", "verified_at"])
+
+    return Response({"message": "Password reset successful. Please log in."})
