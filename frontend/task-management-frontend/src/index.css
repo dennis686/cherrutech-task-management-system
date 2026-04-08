@@ -1,9 +1,11 @@
+@import url("https://fonts.googleapis.com/css2?family=Fraunces:wght@600;700&family=Manrope:wght@400;500;600;700;800&display=swap");
+
 :root {
-  font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+  font-family: "Manrope", "Segoe UI", sans-serif;
   line-height: 1.5;
   font-weight: 400;
-  color: #1f2a24;
-  background: #f7f3ea;
+  color: #18251f;
+  background: #eef4ec;
   font-synthesis: none;
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
@@ -21,6 +23,9 @@ html {
 body {
   margin: 0;
   min-width: 320px;
+  background:
+    radial-gradient(circle at top, rgba(162, 196, 153, 0.28), transparent 24%),
+    linear-gradient(180deg, #f5f8f2 0%, #e7efe4 100%);
 }
 
 a {
